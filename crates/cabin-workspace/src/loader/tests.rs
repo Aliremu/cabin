@@ -1044,8 +1044,16 @@ test-support.workspace = true
         .find(|package| package.package.name.as_str() == "app")
         .unwrap();
     for (name, kind, path) in [
-        ("networking", DependencyKind::Normal, "../../libs/networking"),
-        ("test-support", DependencyKind::Dev, "../../libs/test-support"),
+        (
+            "networking",
+            DependencyKind::Normal,
+            "../../libs/networking",
+        ),
+        (
+            "test-support",
+            DependencyKind::Dev,
+            "../../libs/test-support",
+        ),
     ] {
         let dependency = app
             .package

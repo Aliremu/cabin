@@ -1279,11 +1279,15 @@ fn parses_workspace_path_dependencies_for_each_kind() {
     let workspace = parsed.workspace.unwrap();
     assert_eq!(
         workspace.dependencies["networking"],
-        WorkspaceDependency::Path(Utf8PathBuf::from("libs/networking"))
+        WorkspaceDependency::Path {
+            path: Utf8PathBuf::from("libs/networking")
+        }
     );
     assert_eq!(
         workspace.dev_dependencies["test-support"],
-        WorkspaceDependency::Path(Utf8PathBuf::from("libs/test-support"))
+        WorkspaceDependency::Path {
+            path: Utf8PathBuf::from("libs/test-support")
+        }
     );
 }
 

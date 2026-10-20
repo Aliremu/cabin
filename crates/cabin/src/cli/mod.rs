@@ -1423,8 +1423,7 @@ fn select_single_package_manifest(
         ] {
             for (name, dependency) in table {
                 if let cabin_manifest::WorkspaceDependency::Version(requirement) = dependency {
-                    workspace_dep_requirements
-                        .insert(kind, name.clone(), requirement.clone());
+                    workspace_dep_requirements.insert(kind, name.clone(), requirement.clone());
                 }
             }
         }

@@ -415,7 +415,7 @@ fn scan_workspace_root(
                     WorkspaceDependency::Version(requirement) => {
                         parse_workspace_dep_source(name, requirement)?
                     }
-                    WorkspaceDependency::Path(path) => DependencySource::Path(path.clone()),
+                    WorkspaceDependency::Path { path } => DependencySource::Path(path.clone()),
                 };
                 entry.insert(name.clone(), source);
             }

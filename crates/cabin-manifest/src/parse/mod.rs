@@ -72,11 +72,12 @@ impl RootSettings {
 /// A source declared in `[workspace.dependencies]` or
 /// `[workspace.dev-dependencies]`.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(untagged)]
 pub enum WorkspaceDependency {
     /// A registry version requirement, retained in its original spelling.
     Version(String),
     /// A local path, interpreted relative to the workspace root.
-    Path(Utf8PathBuf),
+    Path { path: Utf8PathBuf },
 }
 
 /// `[workspace]` table contents.
@@ -790,9 +791,9 @@ fn workspace_dependencies_from_raw(
                         (Some(_), Some(_)) => {
                             return Err(ManifestError::DependencyHasPathAndVersion { name });
                         }
-                        (Some(path), None) => {
-                            WorkspaceDependency::Path(Utf8PathBuf::from(path))
-                        }
+                        (Some(path), None) => WorkspaceDependency::Path {
+                            path: Utf8PathBuf::from(path),
+                        },
                         (None, Some(requirement)) => WorkspaceDependency::Version(requirement),
                         (None, None) => {
                             return Err(ManifestError::DependencyMissingSource { name });
