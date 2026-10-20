@@ -1264,6 +1264,34 @@ fn parses_workspace_with_members() {
 }
 
 #[test]
+fn parses_workspace_path_dependencies_for_each_kind() {
+    let manifest = r#"
+            [workspace]
+            members = ["packages/*"]
+
+            [workspace.dependencies]
+            networking = { path = "libs/networking" }
+
+            [workspace.dev-dependencies]
+            test-support = { path = "libs/test-support" }
+        "#;
+    let parsed = parse_manifest_str(manifest).unwrap();
+    let workspace = parsed.workspace.unwrap();
+    assert_eq!(
+        workspace.dependencies["networking"],
+        WorkspaceDependency::Path {
+            path: Utf8PathBuf::from("libs/networking")
+        }
+    );
+    assert_eq!(
+        workspace.dev_dependencies["test-support"],
+        WorkspaceDependency::Path {
+            path: Utf8PathBuf::from("libs/test-support")
+        }
+    );
+}
+
+#[test]
 fn pure_workspace_preserves_root_policy_settings() {
     let manifest = r#"
             [workspace]

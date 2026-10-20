@@ -135,6 +135,11 @@ pub enum WorkspaceError {
     },
 
     #[error(
+        "workspace dependency `{dep_name}` in package `{parent}` resolves to a path that is not valid UTF-8"
+    )]
+    WorkspaceDependencyPathNotUtf8 { dep_name: String, parent: String },
+
+    #[error(
         "package `{package}` at {path} sets `{field} = {{ workspace = true }}`, but the workspace root does not declare `{field}` under `[workspace]`",
         path = path.display()
     )]

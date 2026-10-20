@@ -996,6 +996,80 @@ gtest = { workspace = true }
 }
 
 #[test]
+fn workspace_path_dependencies_resolve_from_the_workspace_root() {
+    let dir = TempDir::new().unwrap();
+    dir.child("cabin.toml")
+        .write_str(
+            r#"[workspace]
+members = ["packages/app"]
+
+[workspace.dependencies]
+networking = { path = "libs/networking" }
+
+[workspace.dev-dependencies]
+test-support = { path = "libs/test-support" }
+"#,
+        )
+        .unwrap();
+    dir.child("packages/app/cabin.toml")
+        .write_str(
+            r#"[package]
+name = "app"
+version = "0.1.0"
+
+[dependencies]
+networking.workspace = true
+
+[dev-dependencies]
+test-support.workspace = true
+"#,
+        )
+        .unwrap();
+    for (path, name) in [
+        ("libs/networking", "networking"),
+        ("libs/test-support", "test-support"),
+    ] {
+        dir.child(format!("{path}/cabin.toml"))
+            .write_str(&format!(
+                "[package]\nname = \"{name}\"\nversion = \"0.1.0\"\n"
+            ))
+            .unwrap();
+    }
+
+    let graph = load_workspace(dir.path().join("cabin.toml")).unwrap();
+    assert_eq!(graph.packages.len(), 2);
+    let app = graph
+        .packages
+        .iter()
+        .find(|package| package.package.name.as_str() == "app")
+        .unwrap();
+    for (name, kind, path) in [
+        (
+            "networking",
+            DependencyKind::Normal,
+            "../../libs/networking",
+        ),
+        (
+            "test-support",
+            DependencyKind::Dev,
+            "../../libs/test-support",
+        ),
+    ] {
+        let dependency = app
+            .package
+            .dependencies
+            .iter()
+            .find(|dependency| dependency.name.as_str() == name)
+            .unwrap();
+        assert_eq!(dependency.kind, kind);
+        assert_eq!(
+            dependency.source,
+            DependencySource::Path(camino::Utf8PathBuf::from(path))
+        );
+    }
+}
+
+#[test]
 fn workspace_dependency_kind_does_not_cross_tables() {
     // `[dev-dependencies] foo = { workspace = true }` must
     // *not* fall back to `[workspace.dependencies]` - the

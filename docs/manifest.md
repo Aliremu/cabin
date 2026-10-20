@@ -279,8 +279,8 @@ The workspace table accepts these additional fields, all optional:
   `members`;
 - `default-members` - the subset of members commands operate on when no package-selection flags are
   passed at the workspace root;
-- `[workspace.dependencies]` and `[workspace.dev-dependencies]` - shared version requirements that
-  member entries reference with `dep = { workspace = true }`;
+- `[workspace.dependencies]` and `[workspace.dev-dependencies]` - shared version requirements or
+  workspace-root-relative paths that member entries reference with `dep = { workspace = true }`;
 - `c-standard` - shared C implementation-standard default (literal value only) that member packages
   opt into per field with `c-standard = { workspace = true }`;
 - `cxx-standard` - shared C++ implementation-standard default (same opt-in form);

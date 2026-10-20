@@ -1,7 +1,7 @@
 use crate::error::WorkspaceError;
 use crate::graph::{DependencyEdge, PackageGraph, PackageKind, WorkspacePackage};
 use cabin_core::{DependencyKind, DependencySource, PackageName};
-use cabin_manifest::ParsedManifest;
+use cabin_manifest::{ParsedManifest, WorkspaceDependency};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
@@ -263,7 +263,8 @@ fn load_workspace_inner(
         // rewrite each `{ workspace = true }` dep into the
         // resolved source from `[workspace.dependencies]` before any
         // other consumer sees it.
-        let package = resolve_workspace_dependencies(package, &workspace_deps)?;
+        let package =
+            resolve_workspace_dependencies(package, &workspace_deps, &root_dir, &manifest_dir)?;
 
         // rewrite each `{ workspace = true }` standard-field marker
         // into the value inherited from the root `[workspace]`
@@ -409,8 +410,14 @@ fn scan_workspace_root(
                 continue;
             }
             let entry = workspace_deps.entry(kind).or_default();
-            for (name, req) in table {
-                entry.insert(name.clone(), parse_workspace_dep_source(name, req)?);
+            for (name, source) in table {
+                let source = match source {
+                    WorkspaceDependency::Version(requirement) => {
+                        parse_workspace_dep_source(name, requirement)?
+                    }
+                    WorkspaceDependency::Path { path } => DependencySource::Path(path.clone()),
+                };
+                entry.insert(name.clone(), source);
             }
         }
     }

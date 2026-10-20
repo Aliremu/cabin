@@ -109,6 +109,8 @@ pub(super) fn expand_workspace_members(
 pub(super) fn resolve_workspace_dependencies(
     mut package: cabin_core::Package,
     workspace_deps: &BTreeMap<DependencyKind, BTreeMap<String, DependencySource>>,
+    workspace_dir: &Path,
+    manifest_dir: &Path,
 ) -> Result<cabin_core::Package, WorkspaceError> {
     for dep in &mut package.dependencies {
         if !matches!(dep.source, DependencySource::Workspace) {
@@ -122,9 +124,60 @@ pub(super) fn resolve_workspace_dependencies(
                 parent: package.name.as_str().to_owned(),
                 kind: dep.kind,
             })?;
-        dep.source = resolved.clone();
+        dep.source = match resolved {
+            DependencySource::Path(path) => {
+                let path = relative_path(manifest_dir, &workspace_dir.join(path));
+                let path = camino::Utf8PathBuf::from_path_buf(path).map_err(|_| {
+                    WorkspaceError::WorkspaceDependencyPathNotUtf8 {
+                        dep_name: dep.name.as_str().to_owned(),
+                        parent: package.name.as_str().to_owned(),
+                    }
+                })?;
+                DependencySource::Path(path)
+            }
+            other => other.clone(),
+        };
     }
     Ok(package)
+}
+
+fn relative_path(from: &Path, to: &Path) -> PathBuf {
+    let from = normalize_path(from);
+    let to = normalize_path(to);
+    let from_components: Vec<_> = from.components().collect();
+    let to_components: Vec<_> = to.components().collect();
+    let common = from_components
+        .iter()
+        .zip(&to_components)
+        .take_while(|(left, right)| left == right)
+        .count();
+
+    let mut relative = PathBuf::new();
+    for component in &from_components[common..] {
+        if matches!(component, std::path::Component::Normal(_)) {
+            relative.push("..");
+        }
+    }
+    for component in &to_components[common..] {
+        relative.push(component.as_os_str());
+    }
+    relative
+}
+
+fn normalize_path(path: &Path) -> PathBuf {
+    let mut normalized = PathBuf::new();
+    for component in path.components() {
+        match component {
+            std::path::Component::CurDir => {}
+            std::path::Component::ParentDir => {
+                if !normalized.pop() {
+                    normalized.push(component.as_os_str());
+                }
+            }
+            other => normalized.push(other.as_os_str()),
+        }
+    }
+    normalized
 }
 
 /// Resolve every `{ workspace = true }` standard-field marker on
