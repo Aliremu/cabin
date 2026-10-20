@@ -101,9 +101,9 @@ pub struct WorkspaceTable {
         skip_serializing_if = "Vec::is_empty"
     )]
     pub default_members: Vec<String>,
-    /// Shared `[workspace.dependencies]` (normal-kind) requirements
-    /// that members may opt into via `dep = { workspace = true }`
-    /// inside `[dependencies]`.
+    /// Shared `[workspace.dependencies]` (normal-kind) sources that
+    /// members may opt into via `dep = { workspace = true }` inside
+    /// `[dependencies]`.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub dependencies: BTreeMap<String, WorkspaceDependency>,
     /// Shared `[workspace.dev-dependencies]`.  Members opt in via
