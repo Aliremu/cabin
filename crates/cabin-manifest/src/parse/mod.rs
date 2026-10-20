@@ -1,6 +1,7 @@
 use crate::error::ManifestError;
 use crate::raw::{RawDependency, RawManifest, RawPackage, RawStandardField, RawTarget};
 use cabin_core::{Dependency, DependencyKind, Package, PackageName, SystemDependency};
+use camino::Utf8PathBuf;
 use serde::Serialize;
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -68,6 +69,16 @@ impl RootSettings {
     }
 }
 
+/// A source declared in `[workspace.dependencies]` or
+/// `[workspace.dev-dependencies]`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub enum WorkspaceDependency {
+    /// A registry version requirement, retained in its original spelling.
+    Version(String),
+    /// A local path, interpreted relative to the workspace root.
+    Path(Utf8PathBuf),
+}
+
 /// `[workspace]` table contents.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct WorkspaceTable {
@@ -91,10 +102,9 @@ pub struct WorkspaceTable {
     pub default_members: Vec<String>,
     /// Shared `[workspace.dependencies]` (normal-kind) requirements
     /// that members may opt into via `dep = { workspace = true }`
-    /// inside `[dependencies]`.  Stored as the original requirement
-    /// strings; `cabin-workspace` parses them at member load time.
+    /// inside `[dependencies]`.
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
-    pub dependencies: BTreeMap<String, String>,
+    pub dependencies: BTreeMap<String, WorkspaceDependency>,
     /// Shared `[workspace.dev-dependencies]`.  Members opt in via
     /// `dep = { workspace = true }` inside `[dev-dependencies]`.
     #[serde(
@@ -102,7 +112,7 @@ pub struct WorkspaceTable {
         rename = "dev-dependencies",
         skip_serializing_if = "BTreeMap::is_empty"
     )]
-    pub dev_dependencies: BTreeMap<String, String>,
+    pub dev_dependencies: BTreeMap<String, WorkspaceDependency>,
     /// Shared `[workspace]`-level language-standard defaults that
     /// members opt into per field with
     /// `<field> = { workspace = true }` on `[package]`.
@@ -731,10 +741,68 @@ fn workspace_table_from_raw(
         members: raw.members,
         exclude: raw.exclude,
         default_members: raw.default_members,
-        dependencies: raw.dependencies,
-        dev_dependencies: raw.dev_dependencies,
+        dependencies: workspace_dependencies_from_raw(raw.dependencies)?,
+        dev_dependencies: workspace_dependencies_from_raw(raw.dev_dependencies)?,
         standards,
     })
+}
+
+fn workspace_dependencies_from_raw(
+    raw: BTreeMap<String, RawDependency>,
+) -> Result<BTreeMap<String, WorkspaceDependency>, ManifestError> {
+    raw.into_iter()
+        .map(|(name, dependency)| {
+            let dependency = match dependency {
+                RawDependency::String(requirement) => WorkspaceDependency::Version(requirement),
+                RawDependency::Table(table) => {
+                    let crate::raw::RawDependencyTable {
+                        path,
+                        version,
+                        workspace,
+                        system,
+                        optional,
+                        features,
+                        default_features,
+                        ignore_interface_standard,
+                    } = table;
+                    let unsupported_field = if workspace.is_some() {
+                        Some("workspace")
+                    } else if system {
+                        Some("system")
+                    } else if optional.is_some() {
+                        Some("optional")
+                    } else if features.is_some() {
+                        Some("features")
+                    } else if default_features.is_some() {
+                        Some("default-features")
+                    } else if ignore_interface_standard.is_some() {
+                        Some("ignore-interface-standard")
+                    } else {
+                        None
+                    };
+                    if let Some(field) = unsupported_field {
+                        return Err(ManifestError::WorkspaceDependencyUnsupportedField {
+                            name,
+                            field,
+                        });
+                    }
+                    match (path, version) {
+                        (Some(_), Some(_)) => {
+                            return Err(ManifestError::DependencyHasPathAndVersion { name });
+                        }
+                        (Some(path), None) => {
+                            WorkspaceDependency::Path(Utf8PathBuf::from(path))
+                        }
+                        (None, Some(requirement)) => WorkspaceDependency::Version(requirement),
+                        (None, None) => {
+                            return Err(ManifestError::DependencyMissingSource { name });
+                        }
+                    }
+                }
+            };
+            Ok((name, dependency))
+        })
+        .collect()
 }
 
 /// Validate the optional `[workspace]`-level standard fields into

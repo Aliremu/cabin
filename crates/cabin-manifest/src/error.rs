@@ -61,6 +61,14 @@ pub enum ManifestError {
     DependencyHasPathAndVersion { name: String },
 
     #[error(
+        "workspace dependency {name:?} uses unsupported field {field:?}; workspace entries currently accept only `path` or `version`"
+    )]
+    WorkspaceDependencyUnsupportedField {
+        name: String,
+        field: &'static str,
+    },
+
+    #[error(
         "dependency {name:?} sets `workspace = true`; remove `path` / `version` from the same table — pick one source"
     )]
     WorkspaceDependencyHasOtherSource { name: String },

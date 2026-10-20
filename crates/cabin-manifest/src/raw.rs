@@ -506,13 +506,12 @@ pub(crate) struct RawWorkspace {
     #[serde(default, rename = "default-members")]
     pub(crate) default_members: Vec<String>,
     /// Shared `[workspace.dependencies]` (normal-kind workspace
-    /// dependencies).  Stored as strings so the existing
-    /// version-requirement parser can be reused.
+    /// dependencies).
     #[serde(default)]
-    pub(crate) dependencies: BTreeMap<String, String>,
+    pub(crate) dependencies: BTreeMap<String, RawDependency>,
     /// Shared `[workspace.dev-dependencies]`.
     #[serde(default, rename = "dev-dependencies")]
-    pub(crate) dev_dependencies: BTreeMap<String, String>,
+    pub(crate) dev_dependencies: BTreeMap<String, RawDependency>,
     /// `[workspace]`-level language-standard defaults members opt
     /// into per field with `<field> = { workspace = true }`.  The
     /// marker form is not accepted here; the implementation fields

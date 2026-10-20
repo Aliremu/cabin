@@ -89,6 +89,7 @@ members = ["packages/*"]
 
 [workspace.dependencies]
 fmt = ">=10"
+networking = { path = "libs/networking" }
 
 [workspace.dev-dependencies]
 gtest = "^1.14"
@@ -103,10 +104,15 @@ version = "0.1.0"
 
 [dependencies]
 fmt = { workspace = true }       # looks up [workspace.dependencies]
+networking.workspace = true      # inherits the workspace-root-relative path
 
 [dev-dependencies]
 gtest = { workspace = true }     # looks up [workspace.dev-dependencies]
 ```
+
+The path is relative to the workspace root. The inherited path is used by the member
+as though it had declared a path dependency directly. Version requirements may also use
+the table form, such as `fmt = { version = ">=10" }`.
 
 The lookup is **strictly kind-specific**: a `{ workspace = true }` under `[dev-dependencies]` does
 not fall back to `[workspace.dependencies]`.  If the matching workspace table does not declare the

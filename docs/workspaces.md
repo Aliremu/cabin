@@ -10,7 +10,7 @@ Cabin workspaces support:
 - **`[workspace.exclude]`** to drop unwanted directories;
 - **`[workspace.default-members]`** to pick a subset for the no-flag default;
 - **`[workspace.dependencies]`** / **`[workspace.dev-dependencies]`** plus `dep = { workspace = true
-  }` for shared, kind-specific dependency requirements;
+  }` for shared, kind-specific dependency sources;
 - **workspace standard defaults** - shared language-standard values on `[workspace]` that members
   opt into per field with `<field> = { workspace = true }`;
 - **root discovery from member directories** so commands invoked anywhere under the workspace find
@@ -37,8 +37,9 @@ default-members = [
 ]
 
 [workspace.dependencies]
-fmt    = ">=10 <11"
-spdlog = "^1.12"
+fmt        = ">=10 <11"
+spdlog     = "^1.12"
+networking = { path = "libs/networking" }
 ```
 
 A member `cabin.toml` opts into a shared dependency with:
@@ -46,7 +47,11 @@ A member `cabin.toml` opts into a shared dependency with:
 ```toml
 [dependencies]
 fmt = { workspace = true }
+networking.workspace = true
 ```
+
+Version requirements may be strings or `{ version = "..." }` tables. Workspace paths are
+relative to the workspace root, not the member manifest.
 
 ### Rules
 
@@ -71,9 +76,10 @@ fmt = { workspace = true }
   dependency, the declaring section, and the expected workspace section.
 - `workspace = true` cannot be combined with `path = "..."` or `version = "..."`; pick exactly one
   source.
-- Published members are self-contained: `cabin package` rewrites `{ workspace = true }` entries in
-  the archived `cabin.toml` to the workspace table's literal requirement strings, so a consumer
-  never re-resolves them against its own workspace.  See [`package-format.md`](package-format.md).
+- Published members are self-contained: `cabin package` rewrites version-based
+  `{ workspace = true }` entries in the archived `cabin.toml` to literal requirements, so a
+  consumer never re-resolves them against its own workspace. Path dependencies are not publishable.
+  See [`package-format.md`](package-format.md).
 
 ### Workspace standard defaults
 

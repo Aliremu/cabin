@@ -1421,8 +1421,11 @@ fn select_single_package_manifest(
             (cabin_core::DependencyKind::Normal, &workspace.dependencies),
             (cabin_core::DependencyKind::Dev, &workspace.dev_dependencies),
         ] {
-            for (name, requirement) in table {
-                workspace_dep_requirements.insert(kind, name.clone(), requirement.clone());
+            for (name, dependency) in table {
+                if let cabin_manifest::WorkspaceDependency::Version(requirement) = dependency {
+                    workspace_dep_requirements
+                        .insert(kind, name.clone(), requirement.clone());
+                }
             }
         }
     }
